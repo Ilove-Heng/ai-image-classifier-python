@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 import streamlit as st
 from tensorflow.keras.applications.mobilenet_v2 import (
@@ -13,8 +12,17 @@ def load_model():
     return model
 
 def preprocess_image(image):
-    img = np.array(image)
-    img = cv2.resize(img, (224,224))
+    # Resize the image using PIL instead of cv2
+    img = image.resize((224, 224))
+    # Convert PIL image to numpy array
+    img = np.array(img)
+    
+    # Ensure the image has 3 channels (RGB)
+    if len(img.shape) == 2:
+        img = np.stack((img,)*3, axis=-1)
+    elif img.shape[2] == 4:
+        img = img[:, :, :3]  # Remove alpha channel if present
+        
     img = preprocess_input(img)
     img = np.expand_dims(img, axis=0)
     return img
@@ -44,14 +52,12 @@ def main():
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
 
     if uploaded_file is not None:
-        image = st.image(
-            uploaded_file, caption="Uploaded Image", use_container_width=True
-        )
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_container_width=True)
         btn = st.button("Classify Image")
 
         if btn:
             with st.spinner("Analyzing Image..."):
-                image = Image.open(uploaded_file)
                 predictions = classify_image(model, image)
 
                 if predictions: 
